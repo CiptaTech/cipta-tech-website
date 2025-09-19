@@ -11,7 +11,7 @@ import {
     resetPasswordSchema,
 } from "@/lib/validations/user";
 import bcrypt from "bcryptjs";
-import { Role } from "@prisma/client";
+import { saveUploadedFile, deleteUploadedFile } from "@/lib/utils/file-upload";
 
 async function requireAdmin() {
     const session = await getServerSession(authOptions);
@@ -52,7 +52,6 @@ export async function createUser(formData: FormData) {
 
         const validatedData = createUserSchema.parse(rawData);
 
-        // Check if user already exists
         const existingUser = await prisma.user.findUnique({
             where: { email: validatedData.email },
         });
@@ -63,12 +62,27 @@ export async function createUser(formData: FormData) {
 
         const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
+        let profilePath: string | null = null;
+        const profileFile = formData.get("profile") as File;
+        if (profileFile && profileFile.size > 0) {
+            try {
+                profilePath = await saveUploadedFile(
+                    profileFile,
+                    "uploads/profiles"
+                );
+            } catch (error) {
+                console.error("Error saving profile image:", error);
+                return { error: "Failed to upload profile image" };
+            }
+        }
+
         await prisma.user.create({
             data: {
                 ...validatedData,
                 password: hashedPassword,
                 phone: validatedData.phone || null,
                 position: validatedData.position || null,
+                profile: profilePath,
                 socialLinks: validatedData.socialLinks || undefined,
             },
         });
@@ -103,7 +117,6 @@ export async function updateUser(formData: FormData) {
 
         const validatedData = updateUserSchema.parse(rawData);
 
-        // Check if user exists and is not deleted
         const existingUser = await prisma.user.findUnique({
             where: { id: validatedData.id },
         });
@@ -112,7 +125,6 @@ export async function updateUser(formData: FormData) {
             return { error: "User not found" };
         }
 
-        // Check if email is being changed and if it's already taken
         if (validatedData.email && validatedData.email !== existingUser.email) {
             const emailExists = await prisma.user.findUnique({
                 where: { email: validatedData.email },
@@ -123,12 +135,43 @@ export async function updateUser(formData: FormData) {
             }
         }
 
+        let profilePath: string | null = existingUser.profile;
+        const profileFile = formData.get("profile") as File;
+        const profileRemoved = formData.get("profile") === "";
+
+        if (profileFile && profileFile.size > 0) {
+            try {
+                if (existingUser.profile) {
+                    deleteUploadedFile(existingUser.profile);
+                }
+                profilePath = await saveUploadedFile(
+                    profileFile,
+                    "uploads/profiles"
+                );
+            } catch (error) {
+                console.error("Error saving profile image:", error);
+                if (
+                    error instanceof Error &&
+                    error.message.includes("File size")
+                ) {
+                    return { error: "Profile image must be less than 1MB" };
+                }
+                return { error: "Failed to upload profile image" };
+            }
+        } else if (profileRemoved) {
+            if (existingUser.profile) {
+                deleteUploadedFile(existingUser.profile);
+            }
+            profilePath = null;
+        }
+
         const updateData: any = {
             name: validatedData.name,
             email: validatedData.email,
             phone: validatedData.phone || null,
             position: validatedData.position || null,
             role: validatedData.role,
+            profile: profilePath,
             socialLinks: validatedData.socialLinks || undefined,
         };
 
@@ -161,7 +204,6 @@ export async function deleteUser(id: string) {
             return { error: "User not found" };
         }
 
-        // Soft delete
         await prisma.user.update({
             where: { id },
             data: { deletedAt: new Date() },

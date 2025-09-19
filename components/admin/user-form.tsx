@@ -48,6 +48,7 @@ export default function UserForm({
     const [profilePreview, setProfilePreview] = useState<string | null>(
         defaultValues?.profile || null
     );
+    const [profileRemoved, setProfileRemoved] = useState<boolean>(false);
 
     const form = useForm<UserFormData | CreateUserData>({
         resolver: zodResolver(
@@ -58,16 +59,23 @@ export default function UserForm({
 
     useEffect(() => {
         if (defaultValues) {
-            // Use reset() to properly update all form fields
             form.reset(defaultValues);
             setProfilePreview(defaultValues.profile || null);
+            setProfileRemoved(false);
         }
     }, [defaultValues, form]);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         if (file) {
+            const maxSize = 1 * 1024 * 1024; // 1MB in bytes
+            if (file.size > maxSize) {
+                toast.error("Profile image must be less than 1MB");
+                return;
+            }
+
             setProfileFile(file);
+            setProfileRemoved(false);
             const reader = new FileReader();
             reader.onload = () => {
                 setProfilePreview(reader.result as string);
@@ -76,26 +84,43 @@ export default function UserForm({
         }
     }, []);
 
+    const onDropRejected = useCallback((fileRejections: any[]) => {
+        const rejection = fileRejections[0];
+        if (rejection?.errors?.[0]?.code === "file-too-large") {
+            toast.error("Profile image must be less than 1MB");
+        } else if (rejection?.errors?.[0]?.code === "file-invalid-type") {
+            toast.error(
+                "Please select a valid image file (PNG, JPG, GIF, WebP)"
+            );
+        } else {
+            toast.error("Failed to upload image");
+        }
+    }, []);
+
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
+        onDropRejected,
         accept: {
             "image/*": [".jpeg", ".jpg", ".png", ".gif", ".webp"],
         },
         maxFiles: 1,
-        maxSize: 5 * 1024 * 1024, // 5MB
+        maxSize: 1 * 1024 * 1024, // 1MB
     });
 
     const removeProfile = () => {
         setProfileFile(null);
         setProfilePreview(null);
+        setProfileRemoved(true);
     };
 
     const handleFormSubmit = async (data: UserFormData | CreateUserData) => {
-        const formData = createFormDataFromObject(data);
+        const { profile, ...dataWithoutProfile } = data;
+        const formData = createFormDataFromObject(dataWithoutProfile);
 
-        // Add profile file if selected
         if (profileFile) {
             formData.append("profile", profileFile);
+        } else if (profileRemoved) {
+            formData.append("profile", "");
         }
 
         const result = await onSubmit(formData);
@@ -104,6 +129,9 @@ export default function UserForm({
             toast.error(result.error);
         } else {
             form.reset();
+            setProfileFile(null);
+            setProfilePreview(null);
+            setProfileRemoved(false);
             toast.success(result.success);
         }
     };
@@ -114,7 +142,6 @@ export default function UserForm({
                 onSubmit={form.handleSubmit(handleFormSubmit)}
                 className="space-y-6"
             >
-                {/* Profile Image Upload */}
                 <div className="space-y-2">
                     <Label>Profile Picture</Label>
                     <div className="flex items-center space-x-4">
@@ -151,7 +178,7 @@ export default function UserForm({
                                         : "Drag & drop an image, or click to select"}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">
-                                    PNG, JPG, GIF up to 5MB
+                                    PNG, JPG, GIF up to 1MB
                                 </p>
                             </div>
 
@@ -171,7 +198,6 @@ export default function UserForm({
                     </div>
                 </div>
 
-                {/* Name */}
                 <FormField
                     control={form.control}
                     name="name"
@@ -189,7 +215,6 @@ export default function UserForm({
                     )}
                 />
 
-                {/* Email */}
                 <FormField
                     control={form.control}
                     name="email"
@@ -208,7 +233,6 @@ export default function UserForm({
                     )}
                 />
 
-                {/* Password - only show when creating new user */}
                 {showPasswordField && (
                     <FormField
                         control={form.control}
@@ -229,7 +253,6 @@ export default function UserForm({
                     />
                 )}
 
-                {/* Phone */}
                 <FormField
                     control={form.control}
                     name="phone"
@@ -247,7 +270,6 @@ export default function UserForm({
                     )}
                 />
 
-                {/* Position */}
                 <FormField
                     control={form.control}
                     name="position"
@@ -265,7 +287,6 @@ export default function UserForm({
                     )}
                 />
 
-                {/* Role */}
                 <FormField
                     control={form.control}
                     name="role"
@@ -291,7 +312,6 @@ export default function UserForm({
                     )}
                 />
 
-                {/* Social Links */}
                 <div className="space-y-4">
                     <Label>Social Links</Label>
 
@@ -364,7 +384,6 @@ export default function UserForm({
                     />
                 </div>
 
-                {/* Submit Button */}
                 <div className="flex justify-end space-x-2">
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? "Saving..." : submitLabel}
