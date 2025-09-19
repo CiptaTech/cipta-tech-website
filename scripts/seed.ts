@@ -45,54 +45,54 @@ async function main() {
 
     console.log("Admin user created:", admin);
 
-    const teamMembers = [
-        {
-            email: "john.doe@ciptatech.com",
-            name: "John Doe",
-            phone: "+60123456790",
-            role: "USER" as const,
-            position: "CEO",
-            socialLinks: {
-                linkedin: "https://linkedin.com/in/johndoe",
-                twitter: "https://twitter.com/johndoe",
-            },
-        },
-        {
-            email: "jane.smith@ciptatech.com",
-            name: "Jane Smith",
-            phone: "+60123456791",
-            role: "USER" as const,
-            position: "CTO",
-            socialLinks: {
-                linkedin: "https://linkedin.com/in/janesmith",
-                github: "https://github.com/janesmith",
-            },
-        },
-        {
-            email: "mike.wilson@ciptatech.com",
-            name: "Mike Wilson",
-            phone: "+60123456792",
-            role: "USER" as const,
-            position: "Lead Developer",
-            socialLinks: {
-                linkedin: "https://linkedin.com/in/mikewilson",
-                github: "https://github.com/mikewilson",
-            },
-        },
-    ];
+    // const teamMembers = [
+    //     {
+    //         email: "john.doe@ciptatech.com",
+    //         name: "John Doe",
+    //         phone: "+60123456790",
+    //         role: "USER" as const,
+    //         position: "CEO",
+    //         socialLinks: {
+    //             linkedin: "https://linkedin.com/in/johndoe",
+    //             twitter: "https://twitter.com/johndoe",
+    //         },
+    //     },
+    //     {
+    //         email: "jane.smith@ciptatech.com",
+    //         name: "Jane Smith",
+    //         phone: "+60123456791",
+    //         role: "USER" as const,
+    //         position: "CTO",
+    //         socialLinks: {
+    //             linkedin: "https://linkedin.com/in/janesmith",
+    //             github: "https://github.com/janesmith",
+    //         },
+    //     },
+    //     {
+    //         email: "mike.wilson@ciptatech.com",
+    //         name: "Mike Wilson",
+    //         phone: "+60123456792",
+    //         role: "USER" as const,
+    //         position: "Lead Developer",
+    //         socialLinks: {
+    //             linkedin: "https://linkedin.com/in/mikewilson",
+    //             github: "https://github.com/mikewilson",
+    //         },
+    //     },
+    // ];
 
-    for (const member of teamMembers) {
-        const hashedPassword = await bcrypt.hash("password123", 12);
+    // for (const member of teamMembers) {
+    //     const hashedPassword = await bcrypt.hash("password123", 12);
 
-        await prisma.user.create({
-            data: {
-                ...member,
-                password: hashedPassword,
-            },
-        });
-    }
+    //     await prisma.user.create({
+    //         data: {
+    //             ...member,
+    //             password: hashedPassword,
+    //         },
+    //     });
+    // }
 
-    console.log("Sample team members created");
+    // console.log("Sample team members created");
 }
 
 main()
